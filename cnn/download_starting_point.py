@@ -19,17 +19,31 @@ def download_per_page(url):
         f.close()
 
     
-def download(page1, page2):
-    for p in range(page1, page2 + 1):
-        url = "http://startingpoint.blogs.cnn.com/2012/10/page/%d" % p
-        print url
-        download_per_page(url)
 
+
+#----------------------------------------------------------------------
+def download_by_month(year, month):
+    """get all the download links of one month"""
+    page = 1
+    while True:
+        url = "http://startingpoint.blogs.cnn.com/%d/%d/page/%d" % (year, month, page)
+        print url
+        try:
+            download_per_page(url)
+            page = page + 1
+        except urllib2.HTTPError, e:
+            print e
+            if e.code == 404:
+                break
+            return
+        
+    
+        
 
 if __name__ == "__main__":
-    start_page = 1
-    end_page = 25
-    download(start_page, end_page)
+    year = 2012
+    month = 12
+    download_by_month(year, month)
     print("finish!")
     
 
