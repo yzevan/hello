@@ -8,7 +8,6 @@ import chardet
 import cmd
 import argparse
 
-
     
 #----------------------------------------------------------------------
 def convert(src_filename,src_encoding,  dst_encoding):
