@@ -77,7 +77,7 @@ def get_audio_and_transcript(program_id, current_date):
 			
 			if transcript_node is None:
 				print "No transcript in html"
-				return;
+				continue;
 		
 			trans_file = open(trans_file_path, "w")
 			#write css to hide disclaimer part
