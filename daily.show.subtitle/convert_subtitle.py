@@ -8,8 +8,8 @@ import urllib2
 """download subtifles of TDS from officail site to official/ folder and convert it to SRT format in final/ folder """
 
 
-start_id = 9
-end_id = 15
+start_id = 21
+end_id = 25
 season_id = 18
 
 #URL of season17 is like season_17/episode_001/ds_17001_act1.dfxp.xml 
