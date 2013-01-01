@@ -36,20 +36,26 @@ def usage():
 	for key in prg_list.keys():
 		print "{0}:{1} \n".format(key, prg_list[key]);
 		
-		
-def get_audio_and_transcript(program_id, current_date):
-	url = "http://www.npr.org/templates/rundowns/rundown.php?prgId={0}&prgDate={1}".format(program_id, current_date.strftime('%m-%d-%Y'));
-	print url;
-	soup = BeautifulSoup(urllib2.urlopen(url))
-	#print soup;
+#----------------------------------------------------------------------
+def donwload_by_date(show_date):
+	"""download audio and transcrip of the date and return the date of next show"""
 
+	url = "http://www.npr.org/templates/rundowns/rundown.php?prgId={0}&prgDate={1}".format(program_id, show_date.strftime('%m-%d-%Y'));
+	print "\n\n" + url;	
+	
+	try:
+		soup = BeautifulSoup(urllib2.urlopen(url))
+	except Exception, e:
+		print "Fail to download url: %s" % url
+		return None
+	
+	#print soup;
 	story_list = soup.find_all("div","storywrap")
 
 	for story in story_list:		
 		mp3_url = story.find('a','download').get('href');
 		print mp3_url		
 		mp3_file_name = mp3_url[mp3_url.rindex('/')+1: mp3_url.rindex('?')]
-		print mp3_file_name
 		mp3_file_path = convert_file_path(prg_list[program_id], mp3_file_name)
 		                                  
 		if not os.path.exists(mp3_file_path):
@@ -72,7 +78,11 @@ def get_audio_and_transcript(program_id, current_date):
 		
 		trans_file_path = convert_file_path(prg_list[program_id], trans_file_name)
 		if not os.path.exists(trans_file_path):
-			soup2 = BeautifulSoup(urllib2.urlopen(trans_url))	
+			try:
+				soup2 = BeautifulSoup(urllib2.urlopen(trans_url))	
+			except Exception,e:
+				print "Fail to download transcript:%s" % trans_url
+				continue
 			transcript_node = soup2.find("div", "transcript")
 			
 			if transcript_node is None:
@@ -84,6 +94,59 @@ def get_audio_and_transcript(program_id, current_date):
 			trans_file.write('<style type="text/css">.disclaimer{display:none}</style>');
 			trans_file.write(str(transcript_node));
 			trans_file.close();
+			
+	next_url_node = soup.find('a','next')
+	if next_url_node is None:
+		print 'Error: no "Next Show" link!'
+		return None
+	else:
+		next_url = next_url_node.get("href")
+		return get_date_by_url(next_url)
+		
+
+
+
+		
+def get_audio_and_transcript(program_id, start_date_str, end_date_str):
+	if not os.path.exists(prg_list[program_id]):
+		os.makedirs(prg_list[program_id]);
+		
+	start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d');
+	end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d');
+	d = start_date;
+	delta = datetime.timedelta(1);
+	
+	
+	while  d <> None and d <= end_date:
+		
+		new_date = donwload_by_date(d)		
+		
+		if new_date <> None:
+			d = new_date
+		
+		else:#some old page doesn't have "Next show" link, just fetch the page of next day
+			d = d + delta
+		
+
+	
+#----------------------------------------------------------------------
+def get_date_by_url(url):
+	"""extract the date of the url and return a date datetime object
+	url example: templates/rundowns/rundown.php?prgId=35&prgDate=06-21-2012"""
+	
+	if url is None:
+		return None
+	
+	try:
+		# get index of date in the url
+		index = url.index("prgDate=") + 8 
+		date_str = url[index:]
+		return datetime.datetime.strptime(date_str, '%m-%d-%Y');
+	except Exception, e:
+		print e
+		return None
+	
+	
 
 			
 def convert_file_path(folder, file_name):
@@ -97,51 +160,7 @@ def convert_file_path(folder, file_name):
 		os.makedirs(os.path.join(folder, month))
 	
 	return os.path.join(folder,month,file_name)
-		
-		
-def get_audio(program_id, current_date):
-	url = "http://www.npr.org/templates/rundowns/rundown.php?prgId={0}&prgDate={1}".format(program_id, current_date.strftime('%m-%d-%Y'));
-	print url;
-	soup = BeautifulSoup(urllib2.urlopen(url))
-	#print soup;
-	#transcript_list = soup.find_all('a', 'transcript')
-	transcript_list = soup.find_all('a', ['transcript'])
-	#print transcript_list
-	for t in transcript_list:		
-		#os.system("wget " +  mp3_url)
-		#trans_file = mp3_file[0: mp3_file.rindex('mp3')] + "html"
-		mp3_url = t.parent.parent.find_all('a','download')[0].get('href');
-		print mp3_url		
-		mp3_file_name = mp3_url[mp3_url.rindex('/')+1: mp3_url.rindex('?')]
-		print mp3_file_name	
-		if not os.path.exists(os.path.join(prg_list[program_id],mp3_file_name)):
-			file_mp3_src = urllib2.urlopen(mp3_url);
-			#os.system("wget -O " + mp3_file + " " + mp3_url)			
-			file_mp3 = open (os.path.join(prg_list[program_id], mp3_file_name),'wb')
-			file_mp3.write(file_mp3_src.read())
-			file_mp3.close();
-		
 	
-		trans_url = t.get('href');
-		print trans_url;
-		trans_file_name_prefix = mp3_file_name[0: mp3_file_name.rindex('.mp3')]
-		trans_file_name = trans_file_name_prefix + "_" + trans_url[trans_url.rindex('/')+1:] + ".html"
-		print trans_file_name
-		#os.system("wget -O " + trans_file + " " + trans_url)
-		if not os.path.exists(os.path.join(prg_list[program_id], trans_file_name)):
-			soup2 = BeautifulSoup(urllib2.urlopen(trans_url))	
-			transcript_node = soup2.find("div", "transcript")
-			
-			if transcript_node is None:
-				print "No transcript in html"
-				return;
-		
-			trans_file = open(os.path.join(prg_list[program_id], trans_file_name), "w")
-			#write css to hide disclaimer part
-			trans_file.write('<style type="text/css">.disclaimer{display:none}</style>');
-			trans_file.write(str(transcript_node));
-			trans_file.close();
-		
 		
 	
 
@@ -153,19 +172,12 @@ if __name__ == '__main__':
 		usage();
 		exit();
 	program_id = sys.argv[1];
-	if not os.path.exists(prg_list[program_id]):
-		os.makedirs(prg_list[program_id]);
-		
-	start_date = datetime.datetime.strptime(sys.argv[2], '%Y-%m-%d');
-	end_date = datetime.datetime.strptime(sys.argv[3], '%Y-%m-%d');
-	delta = datetime.timedelta(1);
-	d = start_date;
-	while d <= end_date:
-		print d;
-		get_audio_and_transcript(program_id, d);
-		d += delta;
+	start_date = sys.argv[2];
+	end_date = sys.argv[3];
 	
-	print "\n It's finished!"
+	get_audio_and_transcript(program_id, start_date, end_date)
+	
+	print "\n\n It's finished!"
 	
 	
 	
