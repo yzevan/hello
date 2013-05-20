@@ -10,8 +10,8 @@ import re
 
 
 
-start_id = 200
-end_id = 249
+start_id = 283
+end_id = 300
 
 #URL of season17 is like episode_001/ds_17001_act1.dfxp.xml 
 quotes_url_template = "http://render.cdn.hbo.com/data/content/real-time-with-bill-maher/episodes/0/{0}-episode/synopsis/quotes.xml?g=n"
@@ -61,19 +61,27 @@ for id in range(start_id, end_id+1):
 		#if the file is not downloaded, download the file and save it to disk
 	else:
 		try:
+			print "Trying to get New Rule script for episode %d" % id
 			newrule_response = urllib2.urlopen(newrule_url)	
+			newrule_response_text = newrule_response.read()
+			
+			if BeautifulSoup(newrule_response_text).find("title").get_text().startswith("404"):
+				print "404 error!\n"
+				continue	
+			
 			src_file = open(os.path.join(src_folder,src_file_name), "w" )
-			src_file.write(newrule_response.read())
+			src_file.write(newrule_response_text)
 			src_file.close();
-		except:
-			print "Downloading issues!"
+			
+		except Exception, e:
+			print "Downloading issues!" % e
 			continue
 	
 		
 	soup = BeautifulSoup(open(os.path.join(src_folder,src_file_name)), "xml" )
 	
 	title = soup.find("title").get_text()
-	print "title is:" + soup.find("title").get_text()
+	print "title is:" + title
 	print "search is:" + soup.find("search").get_text()
 	print "try to match date..."
 	
